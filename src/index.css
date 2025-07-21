@@ -8,35 +8,56 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* ClosetLoop Design System */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 26%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 26%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 26%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Forest Green for sustainability */
+    --primary: 122 39% 33%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Soft Beige for accents */
+    --secondary: 60 9% 96%;
+    --secondary-foreground: 0 0% 26%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted backgrounds and text */
+    --muted: 60 9% 96%;
+    --muted-foreground: 0 0% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 60 9% 96%;
+    --accent-foreground: 0 0% 26%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 122 39% 33%;
 
     --radius: 0.5rem;
+
+    /* Custom ClosetLoop tokens */
+    --forest-green: 122 39% 33%;
+    --soft-beige: 60 9% 96%;
+    --dark-gray: 0 0% 26%;
+    
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--forest-green)), hsl(var(--soft-beige)));
+    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--soft-beige)));
+    
+    /* Shadows */
+    --shadow-card: 0 4px 12px -2px hsl(var(--forest-green) / 0.1);
+    --shadow-card-hover: 0 8px 24px -4px hsl(var(--forest-green) / 0.15);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-quick: all 0.2s ease;
 
     --sidebar-background: 0 0% 98%;
 
@@ -101,5 +122,52 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Open Sans', system-ui, sans-serif;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* ClosetLoop Component Styles */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 
+           rounded-lg px-6 py-3 font-medium text-sm min-h-[44px] 
+           transition-all duration-200 hover:scale-105 
+           shadow-md hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 
+           border border-border rounded-lg px-6 py-3 font-medium text-sm min-h-[44px] 
+           transition-all duration-200 hover:scale-105;
+  }
+  
+  .outfit-card {
+    @apply bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover 
+           transition-all duration-300 hover:scale-[1.02] cursor-pointer;
+  }
+  
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+  
+  .card-gradient {
+    background: var(--gradient-card);
+  }
+  
+  .eco-badge {
+    @apply bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+  }
+  
+  .wave-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f5f5dc' fill-opacity='0.3'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20s20-8.954 20-20-8.954-20-20-20-20 8.954-20 20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+}
 }

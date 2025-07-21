@@ -52,6 +52,10 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// ClosetLoop custom colors
+				'forest-green': 'hsl(var(--forest-green))',
+				'soft-beige': 'hsl(var(--soft-beige))',
+				'dark-gray': 'hsl(var(--dark-gray))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -62,6 +66,14 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			fontFamily: {
+				'montserrat': ['Montserrat', 'system-ui', 'sans-serif'],
+				'open-sans': ['Open Sans', 'system-ui', 'sans-serif'],
+			},
+			boxShadow: {
+				'card': 'var(--shadow-card)',
+				'card-hover': 'var(--shadow-card-hover)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
