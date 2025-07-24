@@ -14,7 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      retailers: {
+        Row: {
+          business_license_url: string
+          created_at: string
+          gst_number: string
+          id: string
+          pincode: string
+          store_address: string
+          store_category: Database["public"]["Enums"]["store_category"]
+          store_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_license_url: string
+          created_at?: string
+          gst_number: string
+          id?: string
+          pincode: string
+          store_address: string
+          store_category: Database["public"]["Enums"]["store_category"]
+          store_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_license_url?: string
+          created_at?: string
+          gst_number?: string
+          id?: string
+          pincode?: string
+          store_address?: string
+          store_category?: Database["public"]["Enums"]["store_category"]
+          store_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retailers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +99,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      store_category: "Grocery" | "Electronics" | "Clothing" | "Other"
+      user_role: "user" | "retailer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +227,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      store_category: ["Grocery", "Electronics", "Clothing", "Other"],
+      user_role: ["user", "retailer"],
+    },
   },
 } as const
