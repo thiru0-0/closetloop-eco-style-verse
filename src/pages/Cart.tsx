@@ -1,96 +1,192 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
-import { Trash2, Calendar, Plus, Minus, Leaf, ShoppingBag, CreditCard } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface CartItem {
+  _id: string;
+  outfitId: {
+    _id: string;
+    title: string;
+    imageUrl: string;
+    rentalPrice: number;
+    category: string;
+    size: string;
+  };
+  quantity: number;
+  rentalPrice: number;
+  rentalStartDate?: string;
+  rentalEndDate?: string;
+  addedAt: string;
+}
+
+interface Cart {
+  _id: string;
+  userId: string;
+  items: CartItem[];
+  totalAmount: number;
+  updatedAt: string;
+}
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: '1',
-      title: 'Summer Floral Dress',
-      size: 'S',
-      category: 'Party',
-      imageUrl: '/api/placeholder/200/300',
-      rentalPrice: 499,
-      startDate: '2024-07-25',
-      endDate: '2024-07-28',
-      days: 3,
-      cleaningNote: 'Dry cleaned after every use',
-      sustainable: true
-    },
-    {
-      id: '2',
-      title: 'Professional Business Suit',
-      size: 'M',
-      category: 'Formal',
-      imageUrl: '/api/placeholder/200/300',
-      rentalPrice: 899,
-      startDate: '2024-07-30',
-      endDate: '2024-08-02',
-      days: 3,
-      cleaningNote: 'Steam cleaned and pressed',
-      sustainable: false
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+  const [removingItem, setRemovingItem] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const fetchCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please sign in to view your cart');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/cart', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch cart');
+      }
+
+      const data = await response.json();
+      setCart(data.cart);
+    } catch (err) {
+      setError('Failed to load cart');
+      console.error('Cart fetch error:', err);
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.rentalPrice, 0);
-  const discount = appliedPromo === 'ECO20' ? subtotal * 0.2 : 0;
-  const cleaningFee = cartItems.length * 50;
-  const total = subtotal - discount + cleaningFee;
-
-  const ecoImpact = {
-    co2Saved: cartItems.length * 3.5,
-    waterSaved: cartItems.length * 1500,
-    wasteReduced: cartItems.length * 0.8
   };
 
-  const handleRemoveItem = (itemId: string) => {
-    setCartItems(items => items.filter(item => item.id !== itemId));
-  };
+  const updateQuantity = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
 
-  const handleUpdateDates = (itemId: string, startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    
-    setCartItems(items => items.map(item => 
-      item.id === itemId 
-        ? { ...item, startDate, endDate, days }
-        : item
-    ));
-  };
+    setUpdatingItem(itemId);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/cart/update/${itemId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity: newQuantity })
+      });
 
-  const handleApplyPromo = () => {
-    if (promoCode === 'ECO20') {
-      setAppliedPromo(promoCode);
+      if (!response.ok) {
+        throw new Error('Failed to update quantity');
+      }
+
+      const data = await response.json();
+      setCart(data.cart);
+    } catch (err) {
+      console.error('Update quantity error:', err);
+      setError('Failed to update quantity');
+    } finally {
+      setUpdatingItem(null);
     }
-    setPromoCode('');
   };
 
-  const handleCheckout = () => {
-    console.log('Proceeding to checkout with items:', cartItems);
-    // In a real app, this would navigate to payment
+  const removeItem = async (itemId: string) => {
+    setRemovingItem(itemId);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/cart/remove/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove item');
+      }
+
+      const data = await response.json();
+      setCart(data.cart);
+    } catch (err) {
+      console.error('Remove item error:', err);
+      setError('Failed to remove item');
+    } finally {
+      setRemovingItem(null);
+    }
   };
 
-  if (cartItems.length === 0) {
+  const clearCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/cart/clear', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear cart');
+      }
+
+      const data = await response.json();
+      setCart(data.cart);
+    } catch (err) {
+      console.error('Clear cart error:', err);
+      setError('Failed to clear cart');
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <div className="bg-muted p-8 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center">
-              <ShoppingBag className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h2 className="text-3xl font-montserrat font-bold text-dark-gray mb-4">
-              Your cart is empty
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Discover sustainable fashion and add items to your cart
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">Loading cart...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-red-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cart || cart.items.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-dark-gray mb-2">Your cart is empty</h2>
+            <p className="text-muted-foreground mb-6">
+              Start shopping to add items to your cart
             </p>
-            <button className="btn-primary">Browse Outfits</button>
+            <Link 
+              to="/browse" 
+              className="btn-primary inline-flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Continue Shopping</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -103,85 +199,93 @@ const Cart = () => {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-montserrat font-bold text-dark-gray mb-2">
-            Your Cart
-          </h1>
-          <p className="text-muted-foreground">
-            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} ready for rental
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-montserrat font-bold text-dark-gray mb-2">
+              Shopping Cart
+            </h1>
+            <p className="text-muted-foreground">
+              {cart.items.length} item{cart.items.length !== 1 ? 's' : ''} in your cart
+            </p>
+          </div>
+          <button
+            onClick={clearCart}
+            className="text-red-500 hover:text-red-700 transition-colors"
+          >
+            Clear Cart
+          </button>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-6">
-            {cartItems.map((item) => (
-              <div key={item.id} className="bg-white p-6 rounded-xl shadow-card">
-                <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6">
+          <div className="lg:col-span-2 space-y-4">
+            {cart.items.map((item) => (
+              <div key={item._id} className="bg-white rounded-xl shadow-card p-6">
+                <div className="flex space-x-4">
                   {/* Item Image */}
-                  <div className="relative w-full md:w-48 aspect-[3/4] bg-primary/5 rounded-lg flex items-center justify-center">
-                    <span className="text-6xl">👗</span>
-                    {item.sustainable && (
-                      <div className="absolute top-2 left-2 eco-badge flex items-center space-x-1">
-                        <Leaf className="h-3 w-3" />
-                        <span>Eco</span>
-                      </div>
-                    )}
+                  <div className="w-24 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                    <img
+                      src={item.outfitId.imageUrl}
+                      alt={item.outfitId.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   {/* Item Details */}
-                  <div className="flex-1 space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-semibold text-dark-gray">{item.title}</h3>
-                        <p className="text-muted-foreground">Size {item.size} • {item.category}</p>
-                        <p className="text-2xl font-bold text-primary mt-2">₹{item.rentalPrice}</p>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-dark-gray text-lg mb-2">
+                      {item.outfitId.title}
+                    </h3>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
+                      <span>{item.outfitId.category}</span>
+                      <span>•</span>
+                      <span>Size {item.outfitId.size}</span>
+                    </div>
+                    <p className="text-lg font-bold text-primary mb-4">
+                      ₹{item.rentalPrice}
+                    </p>
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                          disabled={updatingItem === item._id || item.quantity <= 1}
+                          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-8 text-center font-medium">
+                          {updatingItem === item._id ? '...' : item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                          disabled={updatingItem === item._id}
+                          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
                       </div>
+
                       <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        onClick={() => removeItem(item._id)}
+                        disabled={removingItem === item._id}
+                        className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        {removingItem === item._id ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
+                  </div>
 
-                    {/* Rental Dates */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-dark-gray mb-2">
-                          Start Date
-                        </label>
-                        <input
-                          type="date"
-                          value={item.startDate}
-                          onChange={(e) => handleUpdateDates(item.id, e.target.value, item.endDate)}
-                          className="w-full p-2 border border-input rounded-lg focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-dark-gray mb-2">
-                          End Date
-                        </label>
-                        <input
-                          type="date"
-                          value={item.endDate}
-                          onChange={(e) => handleUpdateDates(item.id, item.startDate, e.target.value)}
-                          className="w-full p-2 border border-input rounded-lg focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{item.days} days rental</span>
-                    </div>
-
-                    {/* Cleaning Note */}
-                    <div className="bg-soft-beige p-3 rounded-lg">
-                      <p className="text-xs text-muted-foreground">
-                        ✨ {item.cleaningNote}
-                      </p>
-                    </div>
+                  {/* Item Total */}
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-dark-gray">
+                      ₹{item.rentalPrice * item.quantity}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -189,98 +293,41 @@ const Cart = () => {
           </div>
 
           {/* Order Summary */}
-          <div className="space-y-6">
-            {/* Eco Impact Preview */}
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-xl">
-              <h3 className="font-semibold text-dark-gray mb-4 flex items-center space-x-2">
-                <Leaf className="h-5 w-5 text-primary" />
-                <span>Your Eco Impact</span>
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">CO₂ Saved</span>
-                  <span className="text-sm font-medium text-primary">{ecoImpact.co2Saved}kg</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Water Saved</span>
-                  <span className="text-sm font-medium text-primary">{ecoImpact.waterSaved}L</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Waste Reduced</span>
-                  <span className="text-sm font-medium text-primary">{ecoImpact.wasteReduced}kg</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Promo Code */}
-            <div className="bg-white p-6 rounded-xl shadow-card">
-              <h3 className="font-semibold text-dark-gray mb-4">Promo Code</h3>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Enter promo code"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  className="flex-1 p-2 border border-input rounded-lg focus:ring-2 focus:ring-ring"
-                />
-                <button
-                  onClick={handleApplyPromo}
-                  className="btn-secondary whitespace-nowrap"
-                >
-                  Apply
-                </button>
-              </div>
-              {appliedPromo && (
-                <div className="mt-2 text-sm text-green-600">
-                  ✅ Promo code "{appliedPromo}" applied!
-                </div>
-              )}
-            </div>
-
-            {/* Order Summary */}
-            <div className="bg-white p-6 rounded-xl shadow-card">
-              <h3 className="font-semibold text-dark-gray mb-4">Order Summary</h3>
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-card p-6 sticky top-8">
+              <h2 className="text-xl font-semibold text-dark-gray mb-4">Order Summary</h2>
               
-              <div className="space-y-3">
+              <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">₹{subtotal}</span>
+                  <span className="font-medium">₹{cart.totalAmount}</span>
                 </div>
-                
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount (ECO20)</span>
-                    <span>-₹{discount}</span>
-                  </div>
-                )}
-                
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Cleaning Fee</span>
-                  <span className="font-medium">₹{cleaningFee}</span>
+                  <span className="font-medium">₹{cart.items.length * 50}</span>
                 </div>
-                
-                <div className="border-t pt-3">
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span className="text-primary">₹{total}</span>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Security Deposit</span>
+                  <span className="font-medium">₹{cart.items.length * 200}</span>
+                </div>
+                <hr className="my-3" />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span>₹{cart.totalAmount + (cart.items.length * 250)}</span>
                 </div>
               </div>
 
-              <button
-                onClick={handleCheckout}
-                className="w-full btn-primary mt-6 flex items-center justify-center space-x-2"
-              >
-                <CreditCard className="h-5 w-5" />
-                <span>Proceed to Checkout</span>
+              <button className="w-full btn-primary mb-4">
+                Proceed to Checkout
               </button>
-            </div>
-
-            {/* Security Note */}
-            <div className="bg-soft-beige p-4 rounded-lg">
-              <p className="text-xs text-muted-foreground text-center">
-                🔒 Your payment information is secure and encrypted
-              </p>
+              
+              <Link 
+                to="/browse" 
+                className="w-full btn-secondary inline-flex items-center justify-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Continue Shopping</span>
+              </Link>
             </div>
           </div>
         </div>

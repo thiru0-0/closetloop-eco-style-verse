@@ -7,14 +7,21 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('Auth header:', authHeader);
+    console.log('Token:', token);
+    console.log('JWT_SECRET:', process.env.JWT_SECRET ? '[SET]' : '[NOT SET]');
+
     if (!token) {
       return res.status(401).json({ message: 'Access token required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    console.log('Decoded token:', decoded);
     
     // Get user from database to ensure they still exist and are active
     const user = await User.findById(decoded.id).select('-password');
+    console.log('Found user:', user ? { id: user._id, role: user.role } : 'NOT FOUND');
+    
     if (!user || !user.isActive) {
       return res.status(401).json({ message: 'Invalid token or user not found' });
     }
@@ -22,6 +29,7 @@ const authenticateToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Token expired' });
     } else if (error.name === 'JsonWebTokenError') {

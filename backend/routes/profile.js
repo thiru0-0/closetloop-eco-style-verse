@@ -5,6 +5,58 @@ const { authenticateToken, requireOwnershipOrAdmin } = require('../middleware/au
 
 const router = express.Router();
 
+// GET /api/users/profile - Get current user's profile (using JWT token)
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find user by ID
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Return role-specific data
+    const profileData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      address: user.address,
+      preferences: user.preferences,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
+    // Add retailer-specific fields if user is a retailer
+    if (user.role === 'retailer') {
+      Object.assign(profileData, {
+        storeName: user.storeName,
+        gstNumber: user.gstNumber,
+        businessLicense: user.businessLicense,
+        storeAddress: user.storeAddress,
+        pincode: user.pincode,
+        storeCategory: user.storeCategory
+      });
+    }
+
+    res.json({
+      message: 'Profile retrieved successfully',
+      user: profileData
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
+    });
+  }
+});
+
 // Validation rules
 const updateProfileValidation = [
   param('id').isMongoId().withMessage('Invalid user ID'),

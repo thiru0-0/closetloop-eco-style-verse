@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ShoppingBag, Camera, Leaf } from 'lucide-react';
+import { Heart, ShoppingBag, Camera, Leaf, Loader2 } from 'lucide-react';
 
 interface Outfit {
   id: string;
@@ -16,10 +16,10 @@ interface Outfit {
 
 interface OutfitCardProps {
   outfit: Outfit;
-  onAddToCart: (outfit: Outfit) => void;
-  onTryAR: (outfit: Outfit) => void;
-  onToggleFavorite: (outfitId: string) => void;
-  isFavorited?: boolean;
+  onAddToCart: () => void;
+  onTryAR: () => void;
+  onToggleFavorite: () => void;
+  loading?: boolean;
 }
 
 const OutfitCard: React.FC<OutfitCardProps> = ({
@@ -27,7 +27,7 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
   onAddToCart,
   onTryAR,
   onToggleFavorite,
-  isFavorited = false
+  loading = false
 }) => {
   return (
     <div className="outfit-card group">
@@ -45,14 +45,10 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
         {/* Top Right Actions */}
         <div className="absolute top-3 right-3 flex flex-col space-y-2">
           <button
-            onClick={() => onToggleFavorite(outfit.id)}
-            className={`p-2 rounded-full backdrop-blur-sm transition-all ${
-              isFavorited 
-                ? 'bg-red-500 text-white' 
-                : 'bg-white/80 text-dark-gray hover:bg-white hover:text-red-500'
-            }`}
+            onClick={onToggleFavorite}
+            className="p-2 rounded-full backdrop-blur-sm transition-all bg-white/80 text-dark-gray hover:bg-white hover:text-red-500"
           >
-            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
+            <Heart className="h-4 w-4" />
           </button>
           
           {outfit.sustainable && (
@@ -66,7 +62,7 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
         {/* Bottom Actions - Show on Hover */}
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-y-2">
           <button
-            onClick={() => onTryAR(outfit)}
+            onClick={onTryAR}
             className="w-full btn-secondary flex items-center justify-center space-x-2"
           >
             <Camera className="h-4 w-4" />
@@ -111,16 +107,25 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
 
         {/* Add to Cart Button */}
         <button
-          onClick={() => onAddToCart(outfit)}
-          disabled={!outfit.available}
+          onClick={onAddToCart}
+          disabled={!outfit.available || loading}
           className={`w-full flex items-center justify-center space-x-2 ${
-            outfit.available 
+            outfit.available && !loading
               ? 'btn-primary' 
               : 'bg-muted text-muted-foreground cursor-not-allowed'
           }`}
         >
-          <ShoppingBag className="h-4 w-4" />
-          <span>{outfit.available ? 'Add to Cart' : 'Unavailable'}</span>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Adding...</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="h-4 w-4" />
+              <span>{outfit.available ? 'Add to Cart' : 'Unavailable'}</span>
+            </>
+          )}
         </button>
       </div>
     </div>

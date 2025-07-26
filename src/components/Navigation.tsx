@@ -1,20 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, User, Leaf, Palette, BarChart3 } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, Leaf, Palette, BarChart3, Store, LogOut } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
 
-  const navItems = [
-    { name: 'Browse', path: '/browse', icon: ShoppingBag },
-    { name: 'AI Stylist', path: '/ai-stylist', icon: Palette },
-    { name: 'Swap Market', path: '/swap', icon: Leaf },
-    { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
-    { name: 'Profile', path: '/profile', icon: User },
-  ];
+  useEffect(() => {
+    // Check authentication status
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const user = localStorage.getItem('user');
+    
+    setIsAuthenticated(!!token);
+    setUserRole(role);
+    
+    // Fetch cart count if authenticated
+    if (token) {
+      fetchCartCount();
+    }
+  }, []);
 
+  const fetchCartCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/cart', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCartCount(data.cart?.items?.length || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    setIsAuthenticated(false);
+    setUserRole(null);
+    setCartCount(0);
+    // Redirect to home page
+    window.location.href = '/';
+  };
+
+  // Define navigation items based on role and authentication
+  const getNavItems = () => {
+    const baseItems = [
+      { name: 'Browse', path: '/browse', icon: ShoppingBag },
+      { name: 'AI Stylist', path: '/ai-stylist', icon: Palette },
+      { name: 'Swap Market', path: '/swap', icon: Leaf },
+    ];
+
+    if (isAuthenticated) {
+      if (userRole === 'retailer') {
+        // Retailer-specific items
+        return [
+          ...baseItems,
+          { name: 'Store', path: '/store', icon: Store },
+          { name: 'Profile', path: '/profile', icon: User },
+        ];
+      } else {
+        // User items
+        return [
+          ...baseItems,
+          { name: 'Cart', path: '/cart', icon: ShoppingBag },
+          { name: 'Profile', path: '/profile', icon: User },
+        ];
+      }
+    }
+
+    // Not authenticated - show basic items
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -49,13 +120,37 @@ const Navigation = () => {
 
           {/* Cart & Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/cart" className="relative p-2 text-dark-gray hover:text-primary transition-colors">
-              <ShoppingBag className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                2
-              </span>
-            </Link>
-            <button className="btn-primary">Sign In</button>
+            {isAuthenticated ? (
+              <>
+                {userRole === 'user' && (
+                  <Link to="/cart" className="relative p-2 text-dark-gray hover:text-primary transition-colors">
+                    <ShoppingBag className="h-6 w-6" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">
+                    {userRole === 'retailer' ? 'Retailer' : 'User'}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to="/signin" className="btn-primary">Sign In</Link>
+                <Link to="/signup" className="btn-secondary">Sign Up</Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -90,14 +185,34 @@ const Navigation = () => {
                 </Link>
               );
             })}
+            
             <div className="pt-4 flex items-center justify-between px-3">
-              <Link to="/cart" className="relative p-2 text-dark-gray hover:text-primary transition-colors">
-                <ShoppingBag className="h-6 w-6" />
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  2
-                </span>
-              </Link>
-              <button className="btn-primary">Sign In</button>
+              {isAuthenticated ? (
+                <>
+                  {userRole === 'user' && (
+                    <Link to="/cart" className="relative p-2 text-dark-gray hover:text-primary transition-colors">
+                      <ShoppingBag className="h-6 w-6" />
+                      {cartCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {cartCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/signin" className="btn-primary">Sign In</Link>
+                  <Link to="/signup" className="btn-secondary">Sign Up</Link>
+                </>
+              )}
             </div>
           </div>
         </div>

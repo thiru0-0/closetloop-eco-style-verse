@@ -31,8 +31,44 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'retailer', 'admin'],
     default: 'user'
+  },
+  // Retailer-specific fields
+  storeName: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+    required: function() { return this.role === 'retailer'; }
+  },
+  gstNumber: {
+    type: String,
+    trim: true,
+    match: [/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Please enter a valid GST number'],
+    required: function() { return this.role === 'retailer'; }
+  },
+  businessLicense: {
+    type: String, // URL or file path
+    trim: true,
+    required: false // Make it optional
+  },
+  storeAddress: {
+    type: String,
+    trim: true,
+    maxlength: 500,
+    required: function() { return this.role === 'retailer'; }
+  },
+  pincode: {
+    type: String,
+    trim: true,
+    match: [/^[1-9][0-9]{5}$/, 'Please enter a valid 6-digit pincode'],
+    required: function() { return this.role === 'retailer'; }
+  },
+  storeCategory: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+    required: function() { return this.role === 'retailer'; }
   },
   // Profile fields
   phone: {
@@ -97,7 +133,29 @@ userSchema.pre('save', function(next) {
 
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  try {
+    console.log('Comparing password for user:', this.email);
+    console.log('Candidate password length:', candidatePassword ? candidatePassword.length : 0);
+    console.log('Stored password hash exists:', !!this.password);
+    
+    if (!candidatePassword || !this.password) {
+      console.error('Missing password data for comparison');
+      return false;
+    }
+    
+    const result = await bcrypt.compare(candidatePassword, this.password);
+    console.log('Password comparison result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error during password comparison:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      candidatePasswordType: typeof candidatePassword,
+      storedPasswordType: typeof this.password
+    });
+    return false;
+  }
 };
 
 // Transform output (exclude password)

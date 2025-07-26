@@ -75,31 +75,7 @@ const HeroSection = () => {
                 className="w-full h-[500px] object-cover rounded-2xl shadow-2xl"
               />
             </div>
-            
-            {/* Floating Cards */}
-            <div className="absolute -top-6 -left-6 bg-white p-4 rounded-xl shadow-lg glass-effect">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                  <Leaf className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-dark-gray">3.5kg CO₂</p>
-                  <p className="text-sm text-muted-foreground">Saved this month</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-xl shadow-lg glass-effect">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-dark-gray">1,247</p>
-                  <p className="text-sm text-muted-foreground">Happy renters</p>
-                </div>
-              </div>
-            </div>
+            {/* Removed floating cards for cleaner layout */}
           </div>
         </div>
       </div>

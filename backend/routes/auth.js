@@ -1,208 +1,128 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
-const User = require('../models/user.model');
-const { authenticateToken } = require('../middleware/auth.middleware');
-
 const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const User = require('../models/user.model');
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-  );
-};
+// Signup Route
+router.post('/signup', async (req, res) => {
+  const { name, email, password, role = 'user', storeName, gstNumber, businessLicense, storeAddress, pincode, storeCategory } = req.body;
 
-// Validation rules
-const signupValidation = [
-  body('name')
-    .trim()
-    .isLength({ min: 3, max: 50 })
-    .withMessage('Name must be between 3 and 50 characters'),
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email'),
-  body('password')
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/)
-    .withMessage('Password must be at least 8 characters with 1 uppercase letter and 1 number'),
-  body('role')
-    .optional()
-    .isIn(['user', 'admin'])
-    .withMessage('Role must be either user or admin')
-];
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required' });
+  }
 
-const loginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
-];
+  // Validate role
+  if (role && !['user', 'retailer'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be "user" or "retailer"' });
+  }
 
-// POST /api/auth/signup - Create new user
-router.post('/signup', signupValidation, async (req, res) => {
-  try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+  // Validate retailer-specific fields
+  if (role === 'retailer') {
+    if (!storeName || !gstNumber || !storeAddress || !pincode || !storeCategory) {
+      return res.status(400).json({ error: 'All retailer fields are required: storeName, gstNumber, storeAddress, pincode, storeCategory' });
     }
+  }
 
-    const { name, email, password, role = 'user' } = req.body;
-
-    // Check if user already exists
+  try {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ message: 'User already exists with this email' });
+      return res.status(409).json({ error: 'User already exists' });
     }
 
-    // Create new user
-    const user = new User({
+    // Don't hash password here - the model pre-save hook will handle it
+    const userData = {
       name,
       email,
-      password,
+      password, // Send plain password, model will hash it
       role
-    });
+    };
 
-    await user.save();
-
-    // Generate token
-    const token = generateToken(user._id);
-
-    res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt
-      }
-    });
-
-  } catch (error) {
-    console.error('Signup error:', error);
-    
-    if (error.code === 11000) {
-      return res.status(409).json({ message: 'User already exists with this email' });
-    }
-    
-    res.status(500).json({ 
-      message: 'Server error during signup',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
-    });
-  }
-});
-
-// POST /api/auth/login - Authenticate user
-router.post('/login', loginValidation, async (req, res) => {
-  try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        message: 'Validation failed',
-        errors: errors.array()
+    // Add retailer-specific fields if role is retailer
+    if (role === 'retailer') {
+      Object.assign(userData, {
+        storeName,
+        gstNumber,
+        businessLicense: businessLicense || '', // Make it optional
+        storeAddress,
+        pincode,
+        storeCategory
       });
     }
 
-    const { email, password } = req.body;
-
-    // Find user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Check if user is active
-    if (!user.isActive) {
-      return res.status(401).json({ message: 'Account is deactivated' });
-    }
-
-    // Verify password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    const newUser = new User(userData);
+    await newUser.save();
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET || 'fallback_secret', {
+      expiresIn: '1d',
+    });
 
-    res.json({
-      message: 'Login successful',
+    res.status(201).json({ 
+      message: 'User registered successfully',
       token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        ...(role === 'retailer' && {
+          storeName: newUser.storeName,
+          storeCategory: newUser.storeCategory
+        })
+      }
+    });
+  } catch (err) {
+    console.error('Signup Error:', err);
+    console.error('Error details:', {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      errors: err.errors
+    });
+    res.status(500).json({ error: 'Server error during signup' });
+  }
+});
+
+// Login Route
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '1d',
+    });
+
+    res.status(200).json({ 
+      token, 
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        lastLogin: user.lastLogin
+        ...(user.role === 'retailer' && {
+          storeName: user.storeName,
+          storeCategory: user.storeCategory
+        })
       }
     });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ 
-      message: 'Server error during login',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
-    });
-  }
-});
-
-// POST /api/auth/logout - Logout user (client-side token removal)
-router.post('/logout', authenticateToken, (req, res) => {
-  // In a stateless JWT system, logout is handled client-side by removing the token
-  // This endpoint can be used for logging purposes or token blacklisting if needed
-  res.json({ message: 'Logout successful. Please remove the token from client storage.' });
-});
-
-// GET /api/auth/me - Get current user profile
-router.get('/me', authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({ user });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
-    });
-  }
-});
-
-// POST /api/auth/refresh - Refresh JWT token
-router.post('/refresh', authenticateToken, async (req, res) => {
-  try {
-    const newToken = generateToken(req.user._id);
-    
-    res.json({
-      message: 'Token refreshed successfully',
-      token: newToken
-    });
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    res.status(500).json({ 
-      message: 'Server error during token refresh',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
-    });
+  } catch (err) {
+    console.error('Login Error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

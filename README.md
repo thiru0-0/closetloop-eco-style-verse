@@ -1,73 +1,84 @@
-# Welcome to your Lovable project
+# 👗 ClosetLoop Eco Style Verse
 
-## Project info
+A full-stack sustainable fashion platform enabling outfit rentals, AI stylist recommendations, clothing swaps, and retailer store management. Built for scalability, eco-conscious shopping, and modern UX.
 
-**URL**: https://lovable.dev/projects/e65c4f59-bb36-43be-a6fa-6f21b4188469
+---
 
-## How can I edit this code?
+## 🚀 Frontend Features (React + Tailwind CSS + Radix UI)
 
-There are several ways of editing your application.
+### 🔐 Authentication Pages
+1. **SignIn.tsx** – User login with JWT token storage and role-based redirect.
+2. **SignUp.tsx** – User and Retailer registration with conditional fields.
 
-**Use Lovable**
+### 📄 Core Pages
+- **Browse.tsx** – Outfit listing, search, and filtering with mock and real data.
+- **Profile.tsx** – Role-aware profile display with tabs for users and retailers.
+- **Store.tsx** – Retailer-only dashboard for managing outfits (CRUD operations).
+- **Cart.tsx** – Persistent shopping cart with quantity updates and price calculations.
+- **AIStylist.tsx** *(Under development)* – UI placeholder for AI-based outfit recommendations.
+- **SwapMarket.tsx** *(Under development)* – Clothing exchange marketplace.
+- **NotFound.tsx** – 404 fallback page.
+- **Index.tsx** – Landing page with hero section and platform overview.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e65c4f59-bb36-43be-a6fa-6f21b4188469) and start prompting.
+### 🧩 Reusable Components
+- **Navigation.tsx** – Role-aware responsive navbar with cart indicator.
+- **OutfitCard.tsx** – Displays outfit details with Add to Cart and AR Try-On buttons.
+- **Common UI Elements** – Custom buttons, tabs, dialogs, and toasters based on Radix UI.
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🌐 Navigation & State Management
+- Role-based routes using React Router.
+- Local state and `localStorage` for JWT, cart, and role tracking.
+- Conditional rendering across components based on user type.
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🧪 Backend Features (Express + MongoDB + JWT)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🧬 Models
+- **User** – User and retailer accounts with fields like name, role, email, password, and store details.
+- **Outfit** – Outfit metadata for rent/swap including sustainability info.
+- **Order**, **Rental**, **Swap**, **Notification**, **Cart** – Transactional and utility models.
 
-Follow these steps:
+### 🛣️ Routes & Controllers
+- **Auth** – JWT-based login and registration with password hashing.
+- **Profile** – Role-based profile retrieval with JWT auth.
+- **Outfit**, **Cart**, **Store**, **Swap**, **Rental**, **Notification** – REST APIs with full validation and role access control.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🔒 Security & Middleware
+- JWT token authentication and role-based authorization.
+- `bcrypt` for password hashing, `express-validator` for request validation.
+- Helmet, CORS, and rate limiting middleware configured for protection.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🧾 API Instructions: Registering Users & Retailers
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### 👤 Create User Account
 
-**Edit a file directly in GitHub**
+**POST** `/api/auth/signup`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "Password123",
+  "role": "user"
+}
 
-**Use GitHub Codespaces**
+🏪 Create Retailer Account
+POST /api/auth/signup
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+{
+  "name": "Alice Retail",
+  "email": "retailer@example.com",
+  "password": "RetailPass456",
+  "role": "retailer",
+  "storeName": "Alice Fashion",
+  "gstNumber": "29ABCDE1234F2Z5",
+  "businessLicense": "LIC123456",
+  "storeAddress": "123 Fashion Street, NY",
+  "pincode": "10001",
+  "storeCategory": "Traditional"
+}
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/e65c4f59-bb36-43be-a6fa-6f21b4188469) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+🔐 Note: Use /api/auth/login to authenticate and receive a JWT token for subsequent authorized routes.
